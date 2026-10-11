@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111827">
+<title>Daily Goals</title>
+<style>
+  :root{color-scheme:dark;--bg:#0b1020;--panel:#141c30;--panel2:#1b2640;--text:#f4f7ff;--muted:#a6b2cc;--accent:#8b9cff;--good:#5ee0ae;--border:#2b3857;--danger:#ff8c9b}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#1a2850 0%,var(--bg) 55%);font:16px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--text)}
+  .wrap{width:min(850px,100%);margin:auto;padding:28px 18px 60px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:22px}
+  .eyebrow{color:var(--accent);font-size:.78rem;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  h1{font-size:clamp(2rem,6vw,3.2rem);letter-spacing:-.05em;line-height:1.05;margin:5px 0 8px}
+  p{margin:0;color:var(--muted)}
+  .date{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:12px;padding:10px}
+  .panel{background:rgba(20,28,48,.94);border:1px solid var(--border);border-radius:20px;padding:20px;margin:16px 0;box-shadow:0 12px 35px #0002}
+  .progress-head{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px}
+  .progress{height:10px;border-radius:99px;background:#29334c;overflow:hidden}
+  .bar{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--good));transition:width .2s}
+  .add-row{display:flex;gap:9px;margin-top:16px}
+  input,textarea{font:inherit;background:#0d1426;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px;min-width:0}
+  input:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+  #goalInput{flex:1}
+  button{font:700 .92rem system-ui;cursor:pointer;border:1px solid var(--border);border-radius:12px;padding:11px 14px;background:var(--panel2);color:var(--text);transition:transform .12s,border-color .12s}
+  button:hover{border-color:var(--accent);transform:translateY(-1px)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#10152a}
+  button.quiet{background:transparent}
+  button.danger{color:var(--danger)}
+  .goal-list{list-style:none;padding:0;margin:15px 0 0;display:grid;gap:9px}
+  .goal{display:flex;align-items:center;gap:12px;padding:13px;background:#10182b;border:1px solid var(--border);border-radius:14px}
+  .goal input[type=checkbox]{width:21px;height:21px;accent-color:var(--good);flex-shrink:0}
+  .goal .label{flex:1;overflow-wrap:anywhere}
+  .goal.done .label{color:#8795b1;text-decoration:line-through}
+  .goal .remove{padding:5px 9px;color:var(--muted);background:transparent}
+  .empty{text-align:center;padding:30px 12px;color:var(--muted);border:1px dashed var(--border);border-radius:14px;margin-top:14px}
+  .actions{display:flex;flex-wrap:wrap;gap:9px;margin-top:15px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  label{display:block;color:var(--muted);font-size:.88rem;margin-bottom:7px}
+  textarea{width:100%;min-height:88px;resize:vertical}
+  .share-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.82rem;overflow-wrap:anywhere}
+  .notice{font-size:.9rem;color:var(--muted);margin-top:10px}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#e8fff5;color:#10251f;padding:10px 16px;border-radius:99px;font-weight:700;box-shadow:0 8px 30px #0005;display:none;z-index:5}
+  footer{text-align:center;color:var(--muted);font-size:.82rem;margin-top:25px}
+  @media(max-width:560px){.wrap{padding:22px 13px 45px}.panel{padding:15px}.add-row{flex-wrap:wrap}#goalInput{flex-basis:100%}.two-col{grid-template-columns:1fr}.goal{gap:9px}.goal .remove{padding:5px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Your day, on purpose</div>
+      <h1>Daily Goals<span style="color:var(--accent)">.</span></h1>
+      <p>Small wins add up. Make today count.</p>
+    </div>
+    <input class="date" id="dayPicker" type="date" aria-label="Choose day">
+  </header>
+
+  <section class="panel">
+    <div class="progress-head"><strong>Today's progress</strong><strong id="progressText">0 of 0 done</strong></div>
+    <div class="progress" role="progressbar" aria-label="Goals completed" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressTrack"><div class="bar" id="progressBar"></div></div>
+    <div class="add-row">
+      <input id="goalInput" maxlength="180" placeholder="Add a goal (e.g. Read for 20 minutes)" aria-label="New goal">
+      <button class="primary" id="addBtn">＋ Add goal</button>
+    </div>
+    <ul class="goal-list" id="goalList"></ul>
+    <div class="empty" id="emptyState">No goals yet. Add one above to get started ✨</div>
+    <div class="actions">
+      <button id="shareBtn" class="primary">↗ Create share code</button>
+      <button id="copyLinkBtn">Copy share link</button>
+      <button id="clearDoneBtn" class="quiet">Remove completed</button>
+    </div>
+    <p class="notice">Your goals save in this browser automatically. Sharing creates a snapshot that someone else can import.</p>
+  </section>
+
+  <section class="panel" id="sharePanel" hidden>
+    <h2 style="margin:0 0 6px;font-size:1.25rem">Share your goals</h2>
+    <p style="margin-bottom:14px">Send the code or link to someone. They can open this page and import it into their own list.</p>
+    <label for="shareCode">Share code</label>
+    <textarea id="shareCode" class="share-code" readonly></textarea>
+    <div class="actions">
+      <button class="primary" id="copyCodeBtn">Copy code</button>
+      <button id="copyGeneratedLinkBtn">Copy link</button>
+      <button class="quiet" id="closeShareBtn">Close</button>
+    </div>
+    <p class="notice">A share code is a copy of the goals at the moment you created it. Later edits won't change an existing code.</p>
+  </section>
+
+  <section class="panel">
+    <h2 style="margin:0 0 6px;font-size:1.25rem">Join or import a shared list</h2>
+    <p style="margin-bottom:14px">Paste a share code below. Importing adds those goals to the selected date; it won't delete your existing goals.</p>
+    <label for="importCode">Share code</label>
+    <textarea id="importCode" class="share-code" placeholder="Paste a share code here…"></textarea>
+    <div class="actions">
+      <button class="primary" id="importBtn">Import goals</button>
+      <button id="openSharedLinkBtn">Open a shared link</button>
+    </div>
+    <p class="notice">Tip: a shared link may load a snapshot automatically when opened.</p>
+  </section>
+  <footer>Private by default · No account required · Stored locally in your browser</footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const STORAGE_KEY = 'dailyGoals.v1';
+  const today = new Date();
+  const localDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  $('dayPicker').value = localDate(today);
+  let allDays = {};
+  try { allDays = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch (_) { allDays = {}; }
+  let currentDay = $('dayPicker').value;
+  let goals = getDay(currentDay);
+  let generatedLink = '';
+  function getDay(day) { if (!Array.isArray(allDays[day])) allDays[day] = []; return allDays[day]; }
+  function save() { allDays[currentDay] = goals; try { localStorage.setItem(STORAGE_KEY, JSON.stringify(allDays)); } catch (_) { toast('Could not save: browser storage may be full.'); } }
+  function toast(message) { const t=$('toast'); t.textContent=message; t.style.display='block'; clearTimeout(toast.timer); toast.timer=setTimeout(()=>t.style.display='none',2600); }
+  function render() {
+    $('goalList').innerHTML = '';
+    $('emptyState').hidden = goals.length > 0;
+    let done = goals.filter(g=>g.done).length;
+    $('progressText').textContent = `${done} of ${goals.length} done`;
+    const pct = goals.length ? Math.round(done/goals.length*100) : 0;
+    $('progressBar').style.width = pct+'%';
+    $('progressTrack').setAttribute('aria-valuenow',pct);
+    goals.forEach((g,i)=>{
+      const li=document.createElement('li'); li.className='goal'+(g.done?' done':'');
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=!!g.done; cb.setAttribute('aria-label','Mark '+g.text+' complete');
+      cb.addEventListener('change',()=>{g.done=cb.checked;save();render();});
+      const label=document.createElement('span'); label.className='label'; label.textContent=g.text;
+      const remove=document.createElement('button'); remove.className='remove'; remove.textContent='✕'; remove.title='Delete goal'; remove.setAttribute('aria-label','Delete '+g.text);
+      remove.addEventListener('click',()=>{goals.splice(i,1);save();render();});
+      li.append(cb,label,remove); $('goalList').appendChild(li);
+    });
+  }
+  function addGoal(text) {
+    text=text.trim(); if(!text) return;
+    goals.push({text,done:false,id:Math.random().toString(36).slice(2,10)});
+    save(); render(); $('goalInput').value='';
+  }
+  $('addBtn').addEventListener('click',()=>addGoal($('goalInput').value));
+  $('goalInput').addEventListener('keydown',e=>{if(e.key==='Enter')addGoal($('goalInput').value);});
+  $('dayPicker').addEventListener('change',()=>{
+    currentDay=$('dayPicker').value || localDate(new Date()); $('dayPicker').value=currentDay;
+    goals=getDay(currentDay); render();
+  });
+  function encodePayload(payload) {
+    const bytes=new TextEncoder().encode(JSON.stringify(payload));
+    let binary=''; bytes.forEach(b=>binary+=String.fromCharCode(b));
+    return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  }
+  function decodePayload(code) {
+    code=code.trim().replace(/^DAILYGOALS1:/,'').replace(/\s/g,'');
+    if(!/^[A-Za-z0-9_-]+$/.test(code)) throw new Error('That does not look like a valid share code.');
+    const padded=code.replace(/-/g,'+').replace(/_/g,'/')+'='.repeat((4-code.length%4)%4);
+    const binary=atob(padded); const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+    const data=JSON.parse(new TextDecoder().decode(bytes));
+    if(data.v!==1||!Array.isArray(data.goals)) throw new Error('This share code is not supported or is damaged.');
+    return data;
+  }
+  function makePayload() { return {v:1,date:currentDay,goals:goals.map(g=>({text:String(g.text).slice(0,180),done:!!g.done})).slice(0,300)}; }
+  async function copy(text) {
+    try { await navigator.clipboard.writeText(text); toast('Copied to clipboard!'); }
+    catch (_) { const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Copied to clipboard!');}catch(e){toast('Copy failed — select and copy the text manually.');}ta.remove(); }
+  }
+  function createShare() {
+    const code=encodePayload(makePayload());
+    $('shareCode').value='DAILYGOALS1:'+code;
+    const url=new URL(location.href); url.hash='share='+code; generatedLink=url.toString();
+    $('sharePanel').hidden=false;
+    $('sharePanel').scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  $('shareBtn').addEventListener('click',createShare);
+  $('copyLinkBtn').addEventListener('click',()=>{createShare();copy(generatedLink);});
+  $('copyCodeBtn').addEventListener('click',()=>copy($('shareCode').value));
+  $('copyGeneratedLinkBtn').addEventListener('click',()=>copy(generatedLink));
+  $('closeShareBtn').addEventListener('click',()=>$('sharePanel').hidden=true);
+  $('clearDoneBtn').addEventListener('click',()=>{const count=goals.filter(g=>g.done).length;if(!count){toast('No completed goals to remove.');return;}goals=goals.filter(g=>!g.done);save();render();toast('Completed goals removed.');});
+  $('importBtn').addEventListener('click',()=>{
+    try {
+      const data=decodePayload($('importCode').value);
+      const incoming=data.goals.filter(g=>g&&typeof g.text==='string'&&g.text.trim()).map(g=>({text:g.text.trim().slice(0,180),done:!!g.done,id:Math.random().toString(36).slice(2,10)}));
+      if(!incoming.length){toast('No goals found in that code.');return;}
+      goals=goals.concat(incoming).slice(0,300);save();render();$('importCode').value='';toast(`Imported ${incoming.length} goal${incoming.length===1?'':'s'}!`);
+    } catch(e) { toast(e.message||'Could not import that code.'); }
+  });
+  $('openSharedLinkBtn').addEventListener('click',()=>{
+    const raw=$('importCode').value.trim();
+    if(!raw){toast('Paste a share code or shared link first.');return;}
+    try {
+      const u=new URL(raw);
+      const code=new URLSearchParams(u.hash.slice(1)).get('share');
+      if(!code) throw new Error('No share code was found in that link.');
+      $('importCode').value='DAILYGOALS1:'+code;
+      $('importBtn').click();
+    } catch(e) { if(raw.startsWith('DAILYGOALS1:')) $('importBtn').click(); else toast(e.message||'Paste a valid shared link.'); }
+  });
+  function loadHashShare() {
+    const params=new URLSearchParams(location.hash.slice(1)); const code=params.get('share');
+    if(!code)return;
+    $('importCode').value='DAILYGOALS1:'+code;
+    try {
+      const data=decodePayload($('importCode').value);
+      if(confirm(`This shared link contains ${data.goals.length} goal(s). Import them into ${currentDay}?`)) $('importBtn').click();
+    } catch(e) { toast(e.message); }
+    history.replaceState(null,'',location.pathname+location.search);
+  }
+  render(); loadHashShare();
+})();
+</script>
+</body>
+</html>
